@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주가 분석 프로젝트 심층 계획 (ISPAS)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .chart-container { position: relative; width: 100%; max-width: 800px; margin: 0 auto; height: 350px; }
+        .nav-item.active { background-color: #e2e8f0; border-left: 4px solid #3b82f6; color: #1d4ed8; font-weight: 700; }
+        .phase-card { transition: all 0.3s ease; cursor: pointer; }
+        .phase-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .phase-card.active { border: 2px solid #3b82f6; background-color: #eff6ff; }
+        /* Custom Scrollbar for better UX */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+    <!-- Chosen Palette: Slate & Blue (Professional, Trustworthy, Analytical) -->
+    <!-- Application Structure Plan: 
+         1. Dashboard Layout: Sidebar navigation for seamless transitions between logical sections.
+         2. Executive Summary: High-level KPIs and goals.
+         3. Project Roadmap (Interactive): 5-Phase timeline where users click to see deep-dive tasks.
+         4. Architecture & Logic: Visual flow of data processing without SVGs (using HTML/CSS boxes).
+         5. Simulation (The 'Wow'): Interactive charts allowing users to toggle 'Bull'/'Bear' scenarios to see how the planned logic handles different markets.
+         6. Risk Management: Accordion/Table view of potential pitfalls and solutions.
+    -->
+    <!-- Visualization & Content Choices:
+         - Line Chart (Chart.js): To visualize the 'Predicted vs Actual' stock prices in the simulation section.
+         - Doughnut Chart (Chart.js): For resource allocation or portfolio weight simulation.
+         - Bar Chart (Chart.js): To compare Model Accuracy metrics (RMSE, MAE).
+         - HTML Grid/Flex: For the Roadmap and Architecture diagram (No SVG/Mermaid).
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex-shrink-0 hidden md:flex flex-col z-20">
+        <div class="p-6 border-b border-slate-100">
+            <h1 class="text-xl font-bold text-slate-800">ISPAS <span class="text-blue-600">Plan</span></h1>
+            <p class="text-xs text-slate-500 mt-1">Intelligent Stock Price Analysis System</p>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4">
+            <ul>
+                <li><button onclick="navigate('dashboard')" id="nav-dashboard" class="nav-item w-full text-left px-6 py-3 text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-3">📊 프로젝트 개요</button></li>
+                <li><button onclick="navigate('roadmap')" id="nav-roadmap" class="nav-item w-full text-left px-6 py-3 text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-3">🚀 실행 로드맵 (5단계)</button></li>
+                <li><button onclick="navigate('architecture')" id="nav-architecture" class="nav-item w-full text-left px-6 py-3 text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-3">🏗️ 기술 아키텍처</button></li>
+                <li><button onclick="navigate('simulation')" id="nav-simulation" class="nav-item w-full text-left px-6 py-3 text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-3">🔮 분석 시뮬레이션</button></li>
+                <li><button onclick="navigate('risk')" id="nav-risk" class="nav-item w-full text-left px-6 py-3 text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-3">🛡️ 리스크 관리</button></li>
+            </ul>
+        </nav>
+        <div class="p-4 border-t border-slate-100 text-center">
+            <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Status: Planning Complete</span>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed top-0 w-full bg-white border-b border-slate-200 z-30 p-4 flex justify-between items-center">
+        <h1 class="text-lg font-bold text-slate-800">ISPAS Plan</h1>
+        <button onclick="toggleMobileMenu()" class="text-slate-600 focus:outline-none">
+            ☰
+        </button>
+    </div>
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu" class="fixed inset-0 bg-slate-800 bg-opacity-50 z-40 hidden" onclick="toggleMobileMenu()">
+        <div class="absolute right-0 top-0 h-full w-64 bg-white shadow-xl p-4" onclick="event.stopPropagation()">
+            <nav class="flex flex-col gap-2 mt-10">
+                <button onclick="navigate('dashboard'); toggleMobileMenu()" class="text-left px-4 py-3 border-b">📊 프로젝트 개요</button>
+                <button onclick="navigate('roadmap'); toggleMobileMenu()" class="text-left px-4 py-3 border-b">🚀 실행 로드맵</button>
+                <button onclick="navigate('architecture'); toggleMobileMenu()" class="text-left px-4 py-3 border-b">🏗️ 기술 아키텍처</button>
+                <button onclick="navigate('simulation'); toggleMobileMenu()" class="text-left px-4 py-3 border-b">🔮 분석 시뮬레이션</button>
+                <button onclick="navigate('risk'); toggleMobileMenu()" class="text-left px-4 py-3 border-b">🛡️ 리스크 관리</button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto relative pt-16 md:pt-0 bg-slate-50" id="main-content">
+        
+        <!-- SECTION 1: DASHBOARD (Overview) -->
+        <section id="dashboard" class="p-6 md:p-10 max-w-7xl mx-auto space-y-8 animate-fade-in">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-800">프로젝트 개요</h2>
+                <p class="text-slate-600 mt-2 text-lg">기존 계획의 한계를 넘어선, 데이터 기반의 고정밀 주가 예측 시스템 구축 전략입니다.</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- KPI Card 1 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-slate-500 font-medium">목표 예측 정확도 (RMSE)</h3>
+                        <span class="text-blue-600 bg-blue-50 px-2 py-1 rounded text-xs font-bold">Target</span>
+                    </div>
+                    <p class="text-3xl font-bold text-slate-800">1.5% <span class="text-sm font-normal text-slate-400">이하</span></p>
+                    <p class="text-sm text-slate-500 mt-2">LSTM & Transformer 하이브리드 모델 적용</p>
+                </div>
+                <!-- KPI Card 2 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-slate-500 font-medium">데이터 처리 지연시간</h3>
+                        <span class="text-green-600 bg-green-50 px-2 py-1 rounded text-xs font-bold">Real-time</span>
+                    </div>
+                    <p class="text-3xl font-bold text-slate-800">&lt; 200ms</p>
+                    <p class="text-sm text-slate-500 mt-2">Kafka & Redis 캐싱 파이프라인 최적화</p>
+                </div>
+                <!-- KPI Card 3 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-slate-500 font-medium">백테스팅 기간</h3>
+                        <span class="text-purple-600 bg-purple-50 px-2 py-1 rounded text-xs font-bold">Robustness</span>
+                    </div>
+                    <p class="text-3xl font-bold text-slate-800">10년</p>
+                    <p class="text-sm text-slate-500 mt-2">2014-2024년 데이터 기반 스트레스 테스트</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="text-xl font-bold text-slate-800 mb-4">🎯 핵심 미션 (Core Mission)</h3>
+                <div class="space-y-4">
+                    <div class="flex items-start gap-4">
+                        <div class="bg-blue-100 p-2 rounded-lg text-blue-600 font-bold">01</div>
+                        <div>
+                            <h4 class="font-bold text-slate-800">데이터 무결성 확보</h4>
+                            <p class="text-slate-600 text-sm">Alpha Vantage와 Yahoo Finance API의 교차 검증을 통해 결측치 0%의 고품질 데이터셋(OHLCV) 구축.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600 font-bold">02</div>
+                        <div>
+                            <h4 class="font-bold text-slate-800">고급 기술적 지표 자동화</h4>
+                            <p class="text-slate-600 text-sm">RSI, MACD, Bollinger Bands 등 15종 이상의 기술적 지표를 실시간 계산하는 파이프라인 구현.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="bg-purple-100 p-2 rounded-lg text-purple-600 font-bold">03</div>
+                        <div>
+                            <h4 class="font-bold text-slate-800">설명 가능한 AI (XAI)</h4>
+                            <p class="text-slate-600 text-sm">단순 예측값을 넘어, SHAP value를 활용하여 '왜' 상승/하락을 예측했는지 근거를 제시하는 모델 개발.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: ROADMAP (Interactive) -->
+        <section id="roadmap" class="hidden p-6 md:p-10 max-w-7xl mx-auto space-y-8 animate-fade-in">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-800">실행 로드맵 (12주 완성)</h2>
+                <p class="text-slate-600 mt-2">각 단계를 클릭하여 상세 과업과 예상 산출물을 확인하세요.</p>
+            </header>
+
+            <!-- Phase Selectors -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div onclick="updateRoadmap(1)" class="phase-card active bg-white p-4 rounded-lg border border-slate-200 text-center" id="phase-btn-1">
+                    <div class="text-xs font-bold text-slate-400 uppercase mb-1">Phase 1</div>
+                    <div class="font-bold text-slate-800">기반 구축</div>
+                    <div class="text-xs text-slate-500 mt-1">Week 1-2</div>
+                </div>
+                <div onclick="updateRoadmap(2)" class="phase-card bg-white p-4 rounded-lg border border-slate-200 text-center" id="phase-btn-2">
+                    <div class="text-xs font-bold text-slate-400 uppercase mb-1">Phase 2</div>
+                    <div class="font-bold text-slate-800">데이터 EDA</div>
+                    <div class="text-xs text-slate-500 mt-1">Week 3-4</div>
+                </div>
+                <div onclick="updateRoadmap(3)" class="phase-card bg-white p-4 rounded-lg border border-slate-200 text-center" id="phase-btn-3">
+                    <div class="text-xs font-bold text-slate-400 uppercase mb-1">Phase 3</div>
+                    <div class="font-bold text-slate-800">모델 개발</div>
+                    <div class="text-xs text-slate-500 mt-1">Week 5-8</div>
+                </div>
+                <div onclick="updateRoadmap(4)" class="phase-card bg-white p-4 rounded-lg border border-slate-200 text-center" id="phase-btn-4">
+                    <div class="text-xs font-bold text-slate-400 uppercase mb-1">Phase 4</div>
+                    <div class="font-bold text-slate-800">백테스팅</div>
+                    <div class="text-xs text-slate-500 mt-1">Week 9-10</div>
+                </div>
+                <div onclick="updateRoadmap(5)" class="phase-card bg-white p-4 rounded-lg border border-slate-200 text-center" id="phase-btn-5">
+                    <div class="text-xs font-bold text-slate-400 uppercase mb-1">Phase 5</div>
+                    <div class="font-bold text-slate-800">배포/UI</div>
+                    <div class="text-xs text-slate-500 mt-1">Week 11-12</div>
+                </div>
+            </div>
+
+            <!-- Dynamic Phase Details -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Left: Description -->
+                    <div class="space-y-6">
+                        <h3 class="text-2xl font-bold text-blue-700" id="phase-title">Phase 1: 인프라 구축 및 데이터 수집</h3>
+                        <p class="text-slate-600 leading-relaxed" id="phase-desc">
+                            성공적인 분석을 위한 튼튼한 기반을 다지는 단계입니다. Python 환경 설정, Git 저장소 초기화, 그리고 금융 데이터 API(Alpha Vantage, Yahoo Finance)와의 연결을 테스트합니다. PostgreSQL 데이터베이스를 구축하여 시계열 데이터를 효율적으로 저장할 스키마를 설계합니다.
+                        </p>
+                        <div>
+                            <h4 class="font-bold text-slate-800 mb-2">✅ 주요 체크리스트</h4>
+                            <ul class="space-y-2 text-sm text-slate-600" id="phase-checklist">
+                                <li class="flex items-center gap-2">🔹 API 키 발급 및 호출 제한(Rate Limit) 테스트</li>
+                                <li class="flex items-center gap-2">🔹 PostgreSQL + TimescaleDB 설치 및 설정</li>
+                                <li class="flex items-center gap-2">🔹 주식 종목 코드(Ticker) 마스터 테이블 생성</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Right: Deliverables & Tools -->
+                    <div class="bg-slate-50 rounded-lg p-6 border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-4 border-b pb-2">🛠 사용 도구 및 기술</h4>
+                        <div class="flex flex-wrap gap-2 mb-6" id="phase-tools">
+                            <span class="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-medium text-slate-600">Python 3.9+</span>
+                            <span class="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-medium text-slate-600">Pandas</span>
+                            <span class="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-medium text-slate-600">SQLAlchemy</span>
+                            <span class="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-medium text-slate-600">Docker</span>
+                        </div>
+                        <h4 class="font-bold text-slate-800 mb-2">📦 산출물</h4>
+                        <ul class="list-disc list-inside text-sm text-slate-600 space-y-1" id="phase-output">
+                            <li>환경 설정 문서 (requirements.txt)</li>
+                            <li>데이터 수집 스크립트 (etl_pipeline.py)</li>
+                            <li>DB 스키마 정의서 (ERD)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: ARCHITECTURE -->
+        <section id="architecture" class="hidden p-6 md:p-10 max-w-7xl mx-auto space-y-8 animate-fade-in">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-800">기술 아키텍처</h2>
+                <p class="text-slate-600 mt-2">데이터 흐름과 시스템 구성 요소를 시각화한 다이어그램입니다.</p>
+            </header>
+
+            <!-- Architecture Flow Diagram (CSS Grid/Flex) -->
+            <div class="bg-slate-100 p-8 rounded-xl border border-slate-200 overflow-x-auto">
+                <div class="min-w-[800px] flex justify-between items-stretch gap-4 relative">
+                    <!-- Layer 1: Data Source -->
+                    <div class="flex flex-col gap-4 w-1/5">
+                        <div class="text-center font-bold text-slate-500 mb-2 text-sm uppercase">Sources</div>
+                        <div class="bg-white p-4 rounded shadow border border-slate-200 text-center h-full flex flex-col justify-center gap-2">
+                            <div class="font-bold text-slate-700">Stock APIs</div>
+                            <div class="text-xs text-slate-500">Alpha Vantage</div>
+                            <div class="text-xs text-slate-500">Yahoo Finance</div>
+                            <div class="text-xs text-slate-500">News Sentiment</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Arrow -->
+                    <div class="flex items-center justify-center text-slate-400">➜</div>
+
+                    <!-- Layer 2: Ingestion & Storage -->
+                    <div class="flex flex-col gap-4 w-1/5">
+                        <div class="text-center font-bold text-slate-500 mb-2 text-sm uppercase">Ingestion</div>
+                        <div class="bg-white p-4 rounded shadow border border-slate-200 text-center h-full flex flex-col justify-center gap-2">
+                            <div class="font-bold text-indigo-600">ETL Pipeline</div>
+                            <div class="text-xs text-slate-500">Python Scripts</div>
+                            <div class="text-xs text-slate-500">Data Cleaning</div>
+                            <div class="border-t pt-2 mt-2">
+                                <div class="font-bold text-slate-700">Database</div>
+                                <div class="text-xs text-slate-500">PostgreSQL</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Arrow -->
+                    <div class="flex items-center justify-center text-slate-400">➜</div>
+
+                    <!-- Layer 3: Analysis & Modeling -->
+                    <div class="flex flex-col gap-4 w-1/5">
+                        <div class="text-center font-bold text-slate-500 mb-2 text-sm uppercase">Core Logic</div>
+                        <div class="bg-white p-4 rounded shadow border border-slate-200 text-center h-full flex flex-col justify-center gap-2">
+                            <div class="font-bold text-purple-600">ML Models</div>
+                            <div class="text-xs text-slate-500 bg-purple-50 rounded px-2">LSTM / GRU</div>
+                            <div class="text-xs text-slate-500 bg-purple-50 rounded px-2">XGBoost</div>
+                            <div class="text-xs text-slate-500 bg-purple-50 rounded px-2">ARIMA</div>
+                        </div>
+                    </div>
+
+                    <!-- Arrow -->
+                    <div class="flex items-center justify-center text-slate-400">➜</div>
+
+                    <!-- Layer 4: Presentation -->
+                    <div class="flex flex-col gap-4 w-1/5">
+                        <div class="text-center font-bold text-slate-500 mb-2 text-sm uppercase">User Interface</div>
+                        <div class="bg-white p-4 rounded shadow border border-slate-200 text-center h-full flex flex-col justify-center gap-2">
+                            <div class="font-bold text-blue-600">Web App</div>
+                            <div class="text-xs text-slate-500">React / Streamlit</div>
+                            <div class="text-xs text-slate-500">Interactive Charts</div>
+                            <div class="text-xs text-slate-500">Alert System</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div class="bg-white p-6 rounded-lg border border-slate-200">
+                    <h3 class="font-bold text-slate-800 mb-2">📊 데이터 파이프라인 전략</h3>
+                    <p class="text-sm text-slate-600">
+                        안정적인 데이터 수급을 위해 2개 이상의 API 소스를 사용하여 <strong>Failover 시스템</strong>을 구축합니다. 수집된 Raw 데이터는 즉시 DB에 적재되며, 1차 가공(결측치 처리, 정규화) 후 'Processed' 테이블로 이동하여 모델 학습 속도를 최적화합니다.
+                    </p>
+                </div>
+                <div class="bg-white p-6 rounded-lg border border-slate-200">
+                    <h3 class="font-bold text-slate-800 mb-2">🤖 모델링 전략 (Ensemble)</h3>
+                    <p class="text-sm text-slate-600">
+                        단일 모델의 편향을 방지하기 위해 <strong>통계적 모델(ARIMA)</strong>과 <strong>딥러닝 모델(LSTM)</strong>을 결합한 앙상블 기법을 사용합니다. 이를 통해 단기 변동성과 장기 추세를 동시에 포착하여 예측 오차를 최소화합니다.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: SIMULATION -->
+        <section id="simulation" class="hidden p-6 md:p-10 max-w-7xl mx-auto space-y-8 animate-fade-in">
+            <header>
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-3xl font-bold text-slate-800">분석 시뮬레이션</h2>
+                        <p class="text-slate-600 mt-2">완성된 모델이 실제 시장에서 어떻게 작동할지 시나리오별로 확인합니다.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="updateSimulation('bull')" class="px-4 py-2 rounded-lg bg-red-100 text-red-700 font-bold hover:bg-red-200 transition-colors">📈 상승장 (Bull)</button>
+                        <button onclick="updateSimulation('bear')" class="px-4 py-2 rounded-lg bg-blue-100 text-blue-700 font-bold hover:bg-blue-200 transition-colors">📉 하락장 (Bear)</button>
+                        <button onclick="updateSimulation('mixed')" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-colors">↔️ 횡보장 (Mixed)</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Chart Area -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span id="scenario-label" class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-sm">횡보장 시나리오</span>
+                    가격 예측 시뮬레이션 (Actual vs Predicted)
+                </h3>
+                <div class="chart-container">
+                    <canvas id="mainPriceChart"></canvas>
+                </div>
+                <div class="mt-4 flex gap-6 justify-center text-sm">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 bg-slate-300 rounded-full"></span>
+                        <span class="text-slate-600">실제 가격 (Actual)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 bg-blue-500 rounded-full"></span>
+                        <span class="text-slate-600 font-bold">모델 예측 (Predicted)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metrics & Secondary Charts -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Accuracy Metrics -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-slate-800 mb-4">모델 성능 지표 비교</h3>
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="metricsChart"></canvas>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2 text-center">* RMSE가 낮을수록 예측이 정확함을 의미합니다.</p>
+                </div>
+
+                <!-- Asset Allocation Logic -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-slate-800 mb-4">AI 추천 포트폴리오 비중</h3>
+                    <div class="flex flex-col md:flex-row items-center gap-6">
+                        <div class="relative h-48 w-48">
+                            <canvas id="allocationChart"></canvas>
+                        </div>
+                        <div class="space-y-3 flex-1">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-600">안전자산 (채권/현금)</span>
+                                <span class="font-bold" id="safe-percent">40%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2">
+                                <div id="safe-bar" class="bg-slate-400 h-2 rounded-full" style="width: 40%"></div>
+                            </div>
+                            
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-600">위험자산 (주식)</span>
+                                <span class="font-bold text-blue-600" id="risk-percent">60%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2">
+                                <div id="risk-bar" class="bg-blue-600 h-2 rounded-full" style="width: 60%"></div>
+                            </div>
+                            
+                            <p class="text-xs text-slate-500 mt-4 bg-slate-50 p-2 rounded">
+                                💡 현재 시나리오에서 AI는 <span id="recommendation-text" class="font-bold">중립적</span> 포지션을 권장합니다.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: RISK MANAGEMENT -->
+        <section id="risk" class="hidden p-6 md:p-10 max-w-7xl mx-auto space-y-8 animate-fade-in">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-800">리스크 관리 전략</h2>
+                <p class="text-slate-600 mt-2">프로젝트 실패 확률을 0%로 수렴시키기 위한 사전 대응책입니다.</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Risk Item 1 -->
+                <div class="bg-white border-l-4 border-red-500 p-6 rounded-r-xl shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-lg text-slate-800">과적합 (Overfitting)</h3>
+                        <span class="bg-red-100 text-red-700 text-xs px-2 py-1 rounded font-bold">High Priority</span>
+                    </div>
+                    <p class="text-slate-600 mt-2 text-sm">
+                        모델이 과거 데이터 패턴을 단순히 암기하여 미래 예측력이 떨어지는 현상.
+                    </p>
+                    <div class="mt-4 bg-slate-50 p-3 rounded text-sm">
+                        <span class="font-bold text-slate-700">✅ 대응책:</span>
+                        <ul class="list-disc list-inside mt-1 text-slate-600">
+                            <li>Walk-forward Cross Validation 사용</li>
+                            <li>Dropout Layer 및 Regularization (L1/L2) 적용</li>
+                            <li>Early Stopping 구현</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Risk Item 2 -->
+                <div class="bg-white border-l-4 border-yellow-500 p-6 rounded-r-xl shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-lg text-slate-800">데이터 품질 저하</h3>
+                        <span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded font-bold">Medium Priority</span>
+                    </div>
+                    <p class="text-slate-600 mt-2 text-sm">
+                        API 장애 혹은 이상치(Outlier) 유입으로 인한 모델 성능 왜곡.
+                    </p>
+                    <div class="mt-4 bg-slate-50 p-3 rounded text-sm">
+                        <span class="font-bold text-slate-700">✅ 대응책:</span>
+                        <ul class="list-disc list-inside mt-1 text-slate-600">
+                            <li>IQR 방식의 이상치 자동 탐지 및 제거</li>
+                            <li>API 소스 이중화 (Alpha Vantage + Yahoo)</li>
+                            <li>결측치 보간법(Interpolation) 고도화</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Risk Item 3 -->
+                <div class="bg-white border-l-4 border-blue-500 p-6 rounded-r-xl shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-lg text-slate-800">실시간 처리 지연 (Latency)</h3>
+                        <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded font-bold">Performance</span>
+                    </div>
+                    <p class="text-slate-600 mt-2 text-sm">
+                        대량 데이터 처리 시 시스템 응답 속도가 느려져 실시간 대응 불가.
+                    </p>
+                    <div class="mt-4 bg-slate-50 p-3 rounded text-sm">
+                        <span class="font-bold text-slate-700">✅ 대응책:</span>
+                        <ul class="list-disc list-inside mt-1 text-slate-600">
+                            <li>Redis 캐싱 레이어 도입</li>
+                            <li>Celery를 이용한 비동기 작업 큐 처리</li>
+                            <li>DB 인덱싱 최적화</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                 <!-- Risk Item 4 -->
+                <div class="bg-white border-l-4 border-purple-500 p-6 rounded-r-xl shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-lg text-slate-800">시장 구조 변화 (Regime Change)</h3>
+                        <span class="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded font-bold">External</span>
+                    </div>
+                    <p class="text-slate-600 mt-2 text-sm">
+                        코로나19와 같은 예측 불가능한 외부 충격으로 인한 시장 로직 붕괴.
+                    </p>
+                    <div class="mt-4 bg-slate-50 p-3 rounded text-sm">
+                        <span class="font-bold text-slate-700">✅ 대응책:</span>
+                        <ul class="list-disc list-inside mt-1 text-slate-600">
+                            <li>변동성(VIX) 지수 연동 동적 임계값 설정</li>
+                            <li>최신 3개월 데이터 가중치 부여 (Recency bias)</li>
+                            <li>비상 정지(Kill Switch) 기능 탑재</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="p-6 text-center text-slate-400 text-sm">
+            &copy; 2024 ISPAS Project Plan. Designed for High-Performance Analysis.
+        </footer>
+    </main>
+
+    <script>
+        // --- State Management ---
+        const state = {
+            currentSection: 'dashboard',
+            currentPhase: 1,
+            currentScenario: 'mixed'
+        };
+
+        // --- Data Storage (Source Report Content) ---
+        const roadmapData = {
+            1: {
+                title: "Phase 1: 인프라 구축 및 데이터 수집",
+                desc: "성공적인 분석을 위한 튼튼한 기반을 다지는 단계입니다. Python 환경 설정, Git 저장소 초기화, 그리고 금융 데이터 API(Alpha Vantage, Yahoo Finance)와의 연결을 테스트합니다. PostgreSQL 데이터베이스를 구축하여 시계열 데이터를 효율적으로 저장할 스키마를 설계합니다.",
+                checklist: [
+                    "API 키 발급 및 호출 제한(Rate Limit) 테스트",
+                    "PostgreSQL + TimescaleDB 설치 및 설정",
+                    "주식 종목 코드(Ticker) 마스터 테이블 생성"
+                ],
+                tools: ["Python 3.9+", "Pandas", "SQLAlchemy", "Docker"],
+                outputs: ["환경 설정 문서 (requirements.txt)", "데이터 수집 스크립트 (etl_pipeline.py)", "DB 스키마 정의서 (ERD)"]
+            },
+            2: {
+                title: "Phase 2: 탐색적 데이터 분석 (EDA)",
+                desc: "수집된 데이터의 특성을 파악하고 전처리 전략을 수립합니다. 주가 데이터의 분포, 결측치 패턴, 이상치를 시각화하여 확인합니다. 이동평균선(SMA, EMA), RSI, MACD 등 기술적 지표를 계산하여 파생 변수(Feature)를 생성합니다.",
+                checklist: [
+                    "OHLCV 데이터 무결성 검증",
+                    "기술적 지표 15종 구현 및 검증",
+                    "데이터 정규화 (Min-Max Scaler) 적용 테스트"
+                ],
+                tools: ["Jupyter Notebook", "Matplotlib", "Seaborn", "TA-Lib"],
+                outputs: ["EDA 분석 리포트 (.ipynb)", "전처리 모듈 (preprocessor.py)", "Feature Engineering 명세서"]
+            },
+            3: {
+                title: "Phase 3: 예측 모델 개발 및 학습",
+                desc: "핵심 알고리즘을 구현하는 단계입니다. 시계열 특화 모델인 ARIMA와 딥러닝 모델인 LSTM/GRU를 각각 개발하고, 이를 결합하거나 비교합니다. 하이퍼파라미터 튜닝(Grid Search)을 통해 모델의 성능을 최적화합니다.",
+                checklist: [
+                    "ARIMA 통계 모델 구현",
+                    "LSTM/GRU 딥러닝 네트워크 설계",
+                    "XGBoost 회귀 모델 학습",
+                    "하이퍼파라미터 튜닝 수행"
+                ],
+                tools: ["PyTorch / TensorFlow", "Scikit-learn", "XGBoost", "Optuna"],
+                outputs: ["모델 학습 가중치 파일 (.pt / .h5)", "모델 성능 비교 보고서", "Inference 파이프라인 코드"]
+            },
+            4: {
+                title: "Phase 4: 백테스팅 및 검증",
+                desc: "과거 데이터를 사용하여 모델의 수익률을 시뮬레이션합니다. 단순히 정확도만 보는 것이 아니라, Sharpe Ratio, MDD(Maximum Drawdown) 등 실질적인 투자 지표를 통해 모델의 안정성을 평가합니다.",
+                checklist: [
+                    "백테스팅 엔진 구현 (수수료, 슬리피지 고려)",
+                    "기간별 수익률 시뮬레이션 (2018-2023)",
+                    "리스크 지표(MDD, Sharpe) 산출"
+                ],
+                tools: ["Backtrader", "Zipline", "PyFolio"],
+                outputs: ["백테스팅 결과 리포트", "매매 로그 (Trade Log)", "투자 전략 수정안"]
+            },
+            5: {
+                title: "Phase 5: 대시보드 구축 및 배포",
+                desc: "분석 결과를 사용자가 쉽게 볼 수 있도록 웹 대시보드를 구축합니다. 모델의 예측 결과와 매수/매도 시그널을 시각화하고, 실시간으로 데이터가 업데이트되도록 스케줄러를 설정합니다.",
+                checklist: [
+                    "FastAPI 백엔드 API 개발",
+                    "Streamlit 또는 React 프론트엔드 연동",
+                    "AWS/GCP 클라우드 배포 및 자동화"
+                ],
+                tools: ["FastAPI", "Streamlit/React", "Docker", "AWS EC2"],
+                outputs: ["최종 웹 애플리케이션 URL", "API 명세서 (Swagger)", "사용자 매뉴얼"]
+            }
+        };
+
+        const simulationData = {
+            mixed: {
+                labels: ['D-10', 'D-9', 'D-8', 'D-7', 'D-6', 'D-5', 'D-4', 'D-3', 'D-2', 'D-1', 'Today', 'D+1', 'D+2', 'D+3'],
+                actual: [100, 102, 101, 103, 102, 104, 103, 105, 104, 106, 105, null, null, null],
+                predicted: [101, 102, 102, 103, 103, 104, 104, 105, 105, 105, 106, 106, 105, 106],
+                allocation: [40, 60], // Safe, Risk
+                recommendation: "관망 (Hold)",
+                label: "횡보장 (Mixed)"
+            },
+            bull: {
+                labels: ['D-10', 'D-9', 'D-8', 'D-7', 'D-6', 'D-5', 'D-4', 'D-3', 'D-2', 'D-1', 'Today', 'D+1', 'D+2', 'D+3'],
+                actual: [100, 101, 103, 105, 107, 108, 110, 112, 115, 117, 120, null, null, null],
+                predicted: [100, 102, 104, 106, 107, 109, 111, 113, 115, 118, 120, 122, 125, 128],
+                allocation: [20, 80],
+                recommendation: "적극 매수 (Strong Buy)",
+                label: "상승장 (Bull)"
+            },
+            bear: {
+                labels: ['D-10', 'D-9', 'D-8', 'D-7', 'D-6', 'D-5', 'D-4', 'D-3', 'D-2', 'D-1', 'Today', 'D+1', 'D+2', 'D+3'],
+                actual: [120, 118, 115, 113, 110, 108, 105, 103, 100, 98, 95, null, null, null],
+                predicted: [119, 117, 115, 112, 110, 107, 105, 102, 100, 97, 95, 93, 90, 88],
+                allocation: [70, 30],
+                recommendation: "비중 축소 (Reduce)",
+                label: "하락장 (Bear)"
+            }
+        };
+
+        // --- Chart Variables ---
+        let mainPriceChart = null;
+        let metricsChart = null;
+        let allocationChart = null;
+
+        // --- Navigation Logic ---
+        function navigate(sectionId) {
+            // Update State
+            state.currentSection = sectionId;
+
+            // Update UI: Hide all sections, Show target
+            document.querySelectorAll('main > section').forEach(sec => {
+                sec.classList.add('hidden');
+            });
+            document.getElementById(sectionId).classList.remove('hidden');
+
+            // Update Sidebar Active State
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            const activeNav = document.getElementById(`nav-${sectionId}`);
+            if(activeNav) activeNav.classList.add('active');
+
+            // Trigger Specific Inits
+            if (sectionId === 'simulation') {
+                initSimulationCharts();
+            }
+            
+            // Mobile Menu Close logic
+            const mobileMenu = document.getElementById('mobile-menu');
+            if (!mobileMenu.classList.contains('hidden')) {
+                toggleMobileMenu();
+            }
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // --- Roadmap Logic ---
+        function updateRoadmap(phaseId) {
+            state.currentPhase = phaseId;
+            const data = roadmapData[phaseId];
+
+            // Update Phase Buttons Styles
+            for (let i = 1; i <= 5; i++) {
+                const btn = document.getElementById(`phase-btn-${i}`);
+                if (i === phaseId) {
+                    btn.classList.add('active', 'border-blue-500', 'bg-blue-50');
+                    btn.classList.remove('border-slate-200');
+                } else {
+                    btn.classList.remove('active', 'border-blue-500', 'bg-blue-50');
+                    btn.classList.add('border-slate-200');
+                }
+            }
+
+            // Update Content with Animation
+            const titleEl = document.getElementById('phase-title');
+            const descEl = document.getElementById('phase-desc');
+            const checklistEl = document.getElementById('phase-checklist');
+            const toolsEl = document.getElementById('phase-tools');
+            const outputEl = document.getElementById('phase-output');
+
+            // Simple Fade Effect
+            titleEl.style.opacity = 0;
+            descEl.style.opacity = 0;
+            
+            setTimeout(() => {
+                titleEl.textContent = data.title;
+                descEl.textContent = data.desc;
+                
+                // Checklist
+                checklistEl.innerHTML = data.checklist.map(item => 
+                    `<li class="flex items-center gap-2"><span class="text-blue-500">🔹</span>${item}</li>`
+                ).join('');
+
+                // Tools
+                toolsEl.innerHTML = data.tools.map(tool => 
+                    `<span class="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-medium text-slate-600 shadow-sm">${tool}</span>`
+                ).join('');
+
+                // Outputs
+                outputEl.innerHTML = data.outputs.map(out => 
+                    `<li>${out}</li>`
+                ).join('');
+
+                titleEl.style.opacity = 1;
+                descEl.style.opacity = 1;
+            }, 200);
+        }
+
+        // --- Simulation Logic ---
+        function initSimulationCharts() {
+            if (mainPriceChart) return; // Already initialized
+
+            // 1. Main Price Chart (Line)
+            const ctx1 = document.getElementById('mainPriceChart').getContext('2d');
+            mainPriceChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: simulationData.mixed.labels,
+                    datasets: [
+                        {
+                            label: 'Actual Price',
+                            data: simulationData.mixed.actual,
+                            borderColor: '#cbd5e1', // Slate 300
+                            backgroundColor: '#cbd5e1',
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'Predicted Price',
+                            data: simulationData.mixed.predicted,
+                            borderColor: '#3b82f6', // Blue 500
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 3,
+                            borderDash: [5, 5],
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            tension: 0.3,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            titleColor: '#1e293b',
+                            bodyColor: '#475569',
+                            borderColor: '#e2e8f0',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { borderDash: [2, 2], color: '#f1f5f9' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // 2. Metrics Chart (Bar)
+            const ctx2 = document.getElementById('metricsChart').getContext('2d');
+            metricsChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['LSTM (Deep Learning)', 'ARIMA (Statistical)', 'XGBoost (ML)'],
+                    datasets: [{
+                        label: 'RMSE (오차율)',
+                        data: [1.2, 2.5, 1.8],
+                        backgroundColor: ['#3b82f6', '#94a3b8', '#64748b'],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { display: false } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // 3. Allocation Chart (Doughnut)
+            const ctx3 = document.getElementById('allocationChart').getContext('2d');
+            allocationChart = new Chart(ctx3, {
+                type: 'doughnut',
+                data: {
+                    labels: ['안전자산', '위험자산(주식)'],
+                    datasets: [{
+                        data: simulationData.mixed.allocation,
+                        backgroundColor: ['#e2e8f0', '#3b82f6'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateSimulation(scenario) {
+            state.currentScenario = scenario;
+            const data = simulationData[scenario];
+
+            // Update Text UI
+            document.getElementById('scenario-label').textContent = data.label;
+            document.getElementById('recommendation-text').textContent = data.recommendation;
+            
+            // Color Coding for Recommendation
+            const recText = document.getElementById('recommendation-text');
+            recText.className = "font-bold " + (scenario === 'bull' ? "text-red-600" : scenario === 'bear' ? "text-blue-600" : "text-slate-700");
+
+            // Update Allocation Bars
+            document.getElementById('safe-percent').textContent = data.allocation[0] + '%';
+            document.getElementById('risk-percent').textContent = data.allocation[1] + '%';
+            document.getElementById('safe-bar').style.width = data.allocation[0] + '%';
+            document.getElementById('risk-bar').style.width = data.allocation[1] + '%';
+
+            // Update Charts
+            if (mainPriceChart) {
+                mainPriceChart.data.datasets[0].data = data.actual;
+                mainPriceChart.data.datasets[1].data = data.predicted;
+                mainPriceChart.update();
+            }
+            if (allocationChart) {
+                allocationChart.data.datasets[0].data = data.allocation;
+                allocationChart.update();
+            }
+        }
+
+        // Initialize Navigation on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check current section from state (default dashboard)
+            navigate(state.currentSection);
+            
+            // Pre-load roadmap default
+            updateRoadmap(1);
+        });
+
+    </script>
+</body>
+</html>
