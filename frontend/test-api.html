@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>API 테스트</title>
+</head>
+<body>
+    <h1>SMCI API 테스트</h1>
+    <button onclick="testAPIs()">SMCI API 호출 테스트</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testAPIs() {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = '테스트 중...\n';
+
+            const ticker = 'SMCI';
+            const apis = [
+                { name: 'Prices', url: `/api/v1/stocks/${ticker}/prices?period=3mo` },
+                { name: 'Indicators', url: `/api/v1/stocks/${ticker}/indicators?summary=true` },
+                { name: 'Signals', url: `/api/v1/stocks/${ticker}/signals` },
+                { name: 'Predictions', url: `/api/v1/predictions/${ticker}?days=7` }
+            ];
+
+            for (const api of apis) {
+                try {
+                    const response = await fetch(api.url);
+                    const data = await response.json();
+                    resultEl.textContent += `\n✅ ${api.name}: ${response.status} ${response.statusText}\n`;
+                    resultEl.textContent += `   Success: ${data.success}\n`;
+                } catch (error) {
+                    resultEl.textContent += `\n❌ ${api.name}: ${error.message}\n`;
+                }
+            }
+
+            resultEl.textContent += '\n=== 테스트 완료 ===';
+        }
+    </script>
+</body>
+</html>
