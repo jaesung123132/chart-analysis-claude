@@ -134,17 +134,48 @@ async def get_trading_signals(ticker: str):
         else:
             signals.append({"indicator": "MA", "signal": "NEUTRAL", "reason": "혼조"})
         
+        # 4. AI 예측 방향 시그널
+        try:
+            from ...services.prediction_service import PredictionService
+            ps = PredictionService()
+            pred = ps.predict_future(ticker.upper(), days=7)
+            current_price = pred['current_price']
+            last_pred = pred['predictions'][-1]['predicted_price']
+            pred_change = ((last_pred - current_price) / current_price) * 100
+            avg_conf = sum(p.get('confidence', 0.5) for p in pred['predictions']) / len(pred['predictions'])
+
+            if pred_change > 2:
+                signals.append({
+                    "indicator": "AI예측",
+                    "signal": "BUY",
+                    "reason": f"7일 후 {pred_change:+.1f}% 상승 예측 (신뢰도 {avg_conf*100:.0f}%)"
+                })
+            elif pred_change < -2:
+                signals.append({
+                    "indicator": "AI예측",
+                    "signal": "SELL",
+                    "reason": f"7일 후 {pred_change:+.1f}% 하락 예측 (신뢰도 {avg_conf*100:.0f}%)"
+                })
+            else:
+                signals.append({
+                    "indicator": "AI예측",
+                    "signal": "NEUTRAL",
+                    "reason": f"7일 후 {pred_change:+.1f}% 보합 예측 (신뢰도 {avg_conf*100:.0f}%)"
+                })
+        except Exception as pred_err:
+            logger.warning("시그널 분석 중 AI 예측 실패", error=str(pred_err))
+
         # 종합 시그널
         buy_count = sum(1 for s in signals if s["signal"] == "BUY")
         sell_count = sum(1 for s in signals if s["signal"] == "SELL")
-        
+
         if buy_count > sell_count:
             overall = "BUY"
         elif sell_count > buy_count:
             overall = "SELL"
         else:
             overall = "NEUTRAL"
-        
+
         return APIResponse(
             success=True,
             data={

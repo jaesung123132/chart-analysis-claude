@@ -4,7 +4,7 @@ FastAPI 메인 애플리케이션
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
-from .api.routers import stocks, indicators, predictions, search
+from .api.routers import stocks, indicators, predictions, search, analysis
 from .infrastructure.database import engine, Base
 from .models import stock as stock_models  # 모델 임포트 (테이블 등록)
 import structlog
@@ -42,6 +42,7 @@ app.include_router(stocks.router, prefix=settings.API_V1_PREFIX)
 app.include_router(indicators.router, prefix=settings.API_V1_PREFIX)
 app.include_router(predictions.router, prefix=settings.API_V1_PREFIX)
 app.include_router(search.router, prefix=settings.API_V1_PREFIX)
+app.include_router(analysis.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.on_event("startup")
